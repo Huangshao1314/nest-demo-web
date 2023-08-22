@@ -1,6 +1,17 @@
 import React, { FC, useEffect, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
-import { Button, Table, Tooltip, Space, Tag } from "antd";
+import {
+  Button,
+  Table,
+  Tooltip,
+  Space,
+  Tag,
+  Input,
+  Form,
+  InputNumber,
+  Typography,
+  Popconfirm,
+} from "antd";
 import api from "../api/http";
 import type { ColumnsType } from "antd/es/table";
 
@@ -8,37 +19,355 @@ interface HomeProps {}
 
 interface DataType {
   id: number;
-  title: string;
-  description: string;
-  done: boolean;
+  lotteryDrawResult: string;
+  lotteryDrawTime: string;
+  lotteryGameNum: string;
 }
 
 const columns: ColumnsType<DataType> = [
   {
-    title: "title",
-    dataIndex: "title",
-    key: "title",
+    title: "lotteryDrawResult",
+    dataIndex: "lotteryDrawResult",
+    key: "lotteryDrawResult",
     render: (text) => <a>{text}</a>,
   },
   {
-    title: "description",
-    dataIndex: "description",
-    key: "description",
+    title: "lotteryDrawTime",
+    dataIndex: "lotteryDrawTime",
+    key: "lotteryDrawTime",
   },
   {
-    title: "done",
-    dataIndex: "done",
-    key: "done",
-    render: (text) => <Tag>{text ? "是" : "否"}</Tag>,
+    title: "lotteryGameNum",
+    dataIndex: "lotteryGameNum",
+    key: "lotteryGameNum",
   },
 ];
+
+// 编辑表格
+interface RateItem {
+  key: string;
+  name: string;
+  column1: string;
+  column2: string;
+  column3: string;
+  column4: string;
+  column5: string;
+  column6: string;
+  column7: string;
+  editable: boolean;
+}
+
+interface EditableCellProps extends React.HTMLAttributes<HTMLElement> {
+  editing: boolean;
+  dataIndex: string;
+  title: any;
+  inputType: "number" | "text";
+  record: RateItem;
+  index: number;
+  children: React.ReactNode;
+}
+
+const EditableCell: React.FC<EditableCellProps> = ({
+  editing,
+  dataIndex,
+  title,
+  inputType,
+  record,
+  index,
+  children,
+  ...restProps
+}) => {
+  const inputNode = inputType === "number" ? <InputNumber /> : <Input />;
+
+  return (
+    <td {...restProps}>
+      {editing ? (
+        <Form.Item
+          name={dataIndex}
+          style={{ margin: 0 }}
+          rules={[
+            {
+              required: true,
+              message: `Please Input ${title}!`,
+            },
+          ]}
+        >
+          {inputNode}
+        </Form.Item>
+      ) : (
+        children
+      )}
+    </td>
+  );
+};
 
 const Home: FC<HomeProps> = (props) => {
   const [data, setData] = useState<DataType[]>([]);
   const query = () => {
     api.get("/tasks").then((res) => {
-      setData(res.data as DataType[]);
+      setData(
+        (res.data as DataType[]).sort(
+          (a, b) =>
+            new Date(b.lotteryDrawTime).getTime() -
+            new Date(a.lotteryDrawTime).getTime()
+        )
+      );
     });
+  };
+
+  const [form] = Form.useForm();
+  const [rateData, setRateData] = useState<RateItem[]>([]);
+  const [editingKey, setEditingKey] = useState("");
+
+  const isEditing = (record: RateItem) => record.key === editingKey;
+
+  const edit = (record: Partial<RateItem> & { key: React.Key }) => {
+    form.setFieldsValue({ name: "", age: "", address: "", ...record });
+    setEditingKey(record.key);
+  };
+
+  const cancel = () => {
+    setEditingKey("");
+  };
+
+  const save = async (key: React.Key) => {
+    try {
+      const row = (await form.validateFields()) as RateItem;
+
+      const newData = [...rateData];
+      const index = newData.findIndex((item) => key === item.key);
+      if (index > -1) {
+        const item = newData[index];
+        newData.splice(index, 1, {
+          ...item,
+          ...row,
+        });
+        setRateData(newData);
+        setEditingKey("");
+      } else {
+        newData.push(row);
+        setRateData(newData);
+        setEditingKey("");
+      }
+    } catch (errInfo) {
+      console.log("Validate Failed:", errInfo);
+    }
+  };
+
+  const rateColumns = [
+    { title: "数据", dataIndex: "name" },
+    {
+      title: "1",
+      dataIndex: "column1",
+      editable: true,
+    },
+    {
+      title: "2",
+      dataIndex: "column2",
+      editable: true,
+    },
+    {
+      title: "3",
+      dataIndex: "column3",
+      editable: true,
+    },
+    {
+      title: "4",
+      dataIndex: "column4",
+      editable: true,
+    },
+    {
+      title: "5",
+      dataIndex: "column5",
+      editable: true,
+    },
+    {
+      title: "6",
+      dataIndex: "column6",
+      editable: true,
+    },
+    {
+      title: "7",
+      dataIndex: "column7",
+      editable: true,
+    },
+    {
+      title: "operation",
+      dataIndex: "operation",
+      render: (_: any, record: RateItem) => {
+        const editable = isEditing(record);
+        return editable ? (
+          <span>
+            <Typography.Link
+              onClick={() => save(record.key)}
+              style={{ marginRight: 8 }}
+            >
+              Save
+            </Typography.Link>
+            <Popconfirm title="Sure to cancel?" onConfirm={cancel}>
+              <a>Cancel</a>
+            </Popconfirm>
+          </span>
+        ) : (
+          <Typography.Link
+            disabled={editingKey !== ""}
+            onClick={() => edit(record)}
+          >
+            Edit
+          </Typography.Link>
+        );
+      },
+    },
+  ];
+
+  const mergedColumns = rateColumns.map((col) => {
+    if (!col.editable) {
+      return col;
+    }
+    return {
+      ...col,
+      onCell: (record: RateItem) => ({
+        record,
+        inputType: col.dataIndex === "age" ? "number" : "text",
+        dataIndex: col.dataIndex,
+        title: col.title,
+        editing: isEditing(record),
+      }),
+      sorter: (a: any, b: any) =>
+        Number(a[col.dataIndex]) - Number(b[col.dataIndex]),
+    };
+  }) as ColumnsType<RateItem>;
+
+  const countHandle = () => {
+    if (data.length === 0) {
+      return;
+    }
+    let obj: any = {};
+    data.forEach((item) => {
+      const temp = item.lotteryDrawResult.split(" ");
+      temp.forEach((tmp, index) => {
+        if (obj[index + 1] == undefined) {
+          obj[index + 1] = {};
+        }
+        if (obj[index + 1][tmp] == undefined) {
+          obj[index + 1][tmp] = 1;
+        } else {
+          obj[index + 1][tmp] += 1;
+        }
+      });
+    });
+    const arr: RateItem[] = [];
+    for (let i = 0; i < 15; i++) {
+      let tmp: any = {
+        key: i + 1 + "",
+        name: i + "",
+      };
+      for (let j = 1; j < 8; j++) {
+        if (i > 9 && j < 7) {
+          tmp["column" + j] = 0;
+        } else {
+          tmp["column" + j] = (1 - (obj[j][i] || 0) / data.length).toFixed(3);
+        }
+      }
+      arr.push(tmp);
+    }
+    setRateData(arr);
+  };
+
+  const resColumns = [
+    { title: "数据", dataIndex: "name" },
+    {
+      title: "1",
+      dataIndex: "column1",
+      editable: true,
+    },
+    {
+      title: "2",
+      dataIndex: "column2",
+      editable: true,
+    },
+    {
+      title: "3",
+      dataIndex: "column3",
+      editable: true,
+    },
+    {
+      title: "4",
+      dataIndex: "column4",
+      editable: true,
+    },
+    {
+      title: "5",
+      dataIndex: "column5",
+      editable: true,
+    },
+    {
+      title: "6",
+      dataIndex: "column6",
+      editable: true,
+    },
+    {
+      title: "7",
+      dataIndex: "column7",
+      editable: true,
+    },
+    {
+      title: "rate",
+      dataIndex: "rate",
+      sorter: (a: any, b: any) => Number(a.rate) - Number(b.rate),
+    },
+  ];
+  const [resData, setResData] = useState<any[]>([]);
+
+  const testHandle = () => {
+    if (rateData.length === 0) {
+      return;
+    }
+    const obj: any = {};
+    for (let i = 1; i < 8; i++) {
+      obj[i] = rateData
+        .sort(
+          (a: any, b: any) => Number(b["column" + i]) - Number(a["column" + i])
+        )
+        .slice(0, 5)
+        .map((item: any) => ({ rate: item["column" + i], num: item.name }));
+    }
+    let arr: any[] = [];
+    let k = 1;
+    obj[1].forEach((item1: any) => {
+      obj[2].forEach((item2: any) => {
+        obj[3].forEach((item3: any) => {
+          obj[4].forEach((item4: any) => {
+            obj[5].forEach((item5: any) => {
+              obj[6].forEach((item6: any) => {
+                obj[7].forEach((item7: any) => {
+                  const tmp = {
+                    name: k++ + "",
+                    column1: item1.num,
+                    column2: item2.num,
+                    column3: item3.num,
+                    column4: item4.num,
+                    column5: item5.num,
+                    column6: item6.num,
+                    column7: item7.num,
+                    rate:
+                      Number(item1.rate) *
+                      Number(item2.rate) *
+                      Number(item3.rate) *
+                      Number(item4.rate) *
+                      Number(item5.rate) *
+                      Number(item6.rate) *
+                      Number(item7.rate),
+                  };
+                  arr.push(tmp);
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+    setResData(arr);
   };
 
   useEffect(() => {}, []);
@@ -51,6 +380,34 @@ const Home: FC<HomeProps> = (props) => {
         columns={columns}
         dataSource={data}
         rowKey={"id"}
+        style={{ marginTop: 20 }}
+      />
+      <Button type="primary" icon={<SearchOutlined />} onClick={countHandle}>
+        计算
+      </Button>
+      <Form form={form} component={false}>
+        <Table
+          components={{
+            body: {
+              cell: EditableCell,
+            },
+          }}
+          bordered
+          dataSource={rateData}
+          columns={mergedColumns}
+          rowClassName="editable-row"
+          pagination={false}
+          style={{ marginTop: 20, marginBottom: 20 }}
+        />
+      </Form>
+
+      <Button type="primary" icon={<SearchOutlined />} onClick={testHandle}>
+        估量
+      </Button>
+      <Table
+        columns={resColumns}
+        dataSource={resData}
+        rowKey={"name"}
         style={{ marginTop: 20 }}
       />
     </div>
