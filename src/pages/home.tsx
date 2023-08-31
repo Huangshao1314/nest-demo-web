@@ -108,8 +108,8 @@ const Home: FC<HomeProps> = (props) => {
       setData(
         (res.data as DataType[]).sort(
           (a, b) =>
-            new Date(b.lotteryDrawTime).getTime() -
-            new Date(a.lotteryDrawTime).getTime()
+            new Date(a.lotteryDrawTime).getTime() -
+            new Date(b.lotteryDrawTime).getTime()
         )
       );
     });
@@ -218,6 +218,16 @@ const Home: FC<HomeProps> = (props) => {
         );
       },
     },
+    {
+      title: "sum1",
+      dataIndex: "sum1",
+      editable: true,
+    },
+    {
+      title: "sum2",
+      dataIndex: "sum2",
+      editable: true,
+    },
   ];
 
   const mergedColumns = rateColumns.map((col) => {
@@ -262,13 +272,22 @@ const Home: FC<HomeProps> = (props) => {
         key: i + 1 + "",
         name: i + "",
       };
+      let sum1 = 0;
+      let sum2 = 0;
       for (let j = 1; j < 8; j++) {
         if (i > 9 && j < 7) {
           tmp["column" + j] = 0;
         } else {
           tmp["column" + j] = (1 - (obj[j][i] || 0) / data.length).toFixed(3);
         }
+        if (j < 4) {
+          sum1 += Number(tmp["column" + j]);
+        } else if (j < 7) {
+          sum2 += Number(tmp["column" + j]);
+        }
       }
+      tmp.sum1 = sum1.toFixed(3);
+      tmp.sum2 = sum2.toFixed(3);
       arr.push(tmp);
     }
     setRateData(arr);
@@ -311,13 +330,10 @@ const Home: FC<HomeProps> = (props) => {
       dataIndex: "column7",
       editable: true,
     },
-    {
-      title: "rate",
-      dataIndex: "rate",
-      sorter: (a: any, b: any) => Number(a.rate) - Number(b.rate),
-    },
   ];
   const [resData, setResData] = useState<any[]>([]);
+  // 定义数字和它们的权重
+  const numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
 
   const testHandle = () => {
     if (rateData.length === 0) {
@@ -325,49 +341,68 @@ const Home: FC<HomeProps> = (props) => {
     }
     const obj: any = {};
     for (let i = 1; i < 8; i++) {
-      obj[i] = rateData
-        .sort(
-          (a: any, b: any) => Number(b["column" + i]) - Number(a["column" + i])
-        )
-        .slice(0, 5)
-        .map((item: any) => ({ rate: item["column" + i], num: item.name }));
+      obj[i] = rateData.map((item: any) => Number(item["column" + i]));
     }
-    let arr: any[] = [];
-    let k = 1;
-    obj[1].forEach((item1: any) => {
-      obj[2].forEach((item2: any) => {
-        obj[3].forEach((item3: any) => {
-          obj[4].forEach((item4: any) => {
-            obj[5].forEach((item5: any) => {
-              obj[6].forEach((item6: any) => {
-                obj[7].forEach((item7: any) => {
-                  const tmp = {
-                    name: k++ + "",
-                    column1: item1.num,
-                    column2: item2.num,
-                    column3: item3.num,
-                    column4: item4.num,
-                    column5: item5.num,
-                    column6: item6.num,
-                    column7: item7.num,
-                    rate:
-                      Number(item1.rate) *
-                      Number(item2.rate) *
-                      Number(item3.rate) *
-                      Number(item4.rate) *
-                      Number(item5.rate) *
-                      Number(item6.rate) *
-                      Number(item7.rate),
-                  };
-                  arr.push(tmp);
-                });
-              });
-            });
-          });
-        });
-      });
-    });
-    setResData(arr);
+
+    // let arr: any[] = [];
+    // let k = 1;
+    // obj[1].forEach((item1: any) => {
+    //   obj[2].forEach((item2: any) => {
+    //     obj[3].forEach((item3: any) => {
+    //       obj[4].forEach((item4: any) => {
+    //         obj[5].forEach((item5: any) => {
+    //           obj[6].forEach((item6: any) => {
+    //             obj[7].forEach((item7: any) => {
+    //               const tmp = {
+    //                 name: k++ + "",
+    //                 column1: item1.num,
+    //                 column2: item2.num,
+    //                 column3: item3.num,
+    //                 column4: item4.num,
+    //                 column5: item5.num,
+    //                 column6: item6.num,
+    //                 column7: item7.num,
+    //                 rate:
+    //                   Number(item1.rate) *
+    //                   Number(item2.rate) *
+    //                   Number(item3.rate) *
+    //                   Number(item4.rate) *
+    //                   Number(item5.rate) *
+    //                   Number(item6.rate) *
+    //                   Number(item7.rate),
+    //               };
+    //               arr.push(tmp);
+    //             });
+    //           });
+    //         });
+    //       });
+    //     });
+    //   });
+    // });
+    // setResData(arr);
+    let row: any = { name: resData.length + 1 };
+    for (let i = 1; i < 8; i++) {
+      row["column" + i] = getRandomNumber(obj[i]);
+    }
+    setResData([...resData, row]);
+    console.error("hello-->resData:", resData);
+  };
+
+  const getRandomNumber = (weights: number[]) => {
+    // 计算累积权重
+    const cumulativeWeights = [];
+    let cumulativeWeight = 0;
+    for (const weight of weights) {
+      cumulativeWeight += weight;
+      cumulativeWeights.push(cumulativeWeight);
+    }
+    const random = Math.random() * cumulativeWeight;
+    for (let i = 0; i < cumulativeWeights.length; i++) {
+      if (random < cumulativeWeights[i]) {
+        return numbers[i];
+      }
+    }
+    return numbers[numbers.length - 1];
   };
 
   useEffect(() => {}, []);
@@ -409,6 +444,7 @@ const Home: FC<HomeProps> = (props) => {
         dataSource={resData}
         rowKey={"name"}
         style={{ marginTop: 20 }}
+        pagination={false}
       />
     </div>
   );
