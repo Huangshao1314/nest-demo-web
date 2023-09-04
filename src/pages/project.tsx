@@ -33,6 +33,8 @@ interface DataType {
   same9: string;
   same10: string;
   total0: string;
+  blue1: string;
+  blue2: string;
 }
 
 const columns: ColumnsType<DataType> = [
@@ -106,6 +108,16 @@ const columns: ColumnsType<DataType> = [
     title: "total0",
     dataIndex: "total0",
     key: "total0",
+  },
+  {
+    title: "blue1",
+    dataIndex: "blue1",
+    key: "blue1",
+  },
+  {
+    title: "blue2",
+    dataIndex: "blue2",
+    key: "blue2",
   },
 ];
 
@@ -225,6 +237,19 @@ const Project: FC<HomeProps> = (props) => {
               j++;
             }
           }
+          let blue1 = 0;
+          let blue2 = 0;
+          for (let i = 1; i < 30; i++) {
+            if (item.blue == arr[index + i]?.blue) {
+              if (blue1 != 0 && blue2 == 0) {
+                blue2 = i;
+                break;
+              }
+              if (blue1 == 0) {
+                blue1 = i;
+              }
+            }
+          }
           data.push({
             lotteryDrawTime: item.date,
             lotteryDrawResult: item.red + "," + item.blue,
@@ -232,6 +257,8 @@ const Project: FC<HomeProps> = (props) => {
             ...same,
             id: index,
             total0: j,
+            blue1,
+            blue2,
           });
         }
       });
@@ -429,7 +456,11 @@ const Project: FC<HomeProps> = (props) => {
   const addHandle = () => {
     setResData([
       ...resData,
-      { id: resData.length + 1, name: data[0].lotteryDrawResult },
+      {
+        id: resData.length + 1,
+        name: data[0].lotteryDrawResult,
+        key: resData.length + 1,
+      },
     ] as ResItem[]);
   };
 
@@ -458,7 +489,7 @@ const Project: FC<HomeProps> = (props) => {
         columns={rateColumns}
         dataSource={rate2Data}
         rowKey={"name"}
-        style={{ marginTop: 20 }}
+        style={{ marginTop: 20, marginBottom: 20 }}
       />
       <Button type="primary" icon={<SearchOutlined />} onClick={addHandle}>
         Add
