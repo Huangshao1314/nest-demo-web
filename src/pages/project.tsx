@@ -22,6 +22,17 @@ interface DataType {
   lotteryDrawResult: string;
   lotteryDrawTime: string;
   lotteryGameNum: string;
+  same1: string;
+  same2: string;
+  same3: string;
+  same4: string;
+  same5: string;
+  same6: string;
+  same7: string;
+  same8: string;
+  same9: string;
+  same10: string;
+  total0: string;
 }
 
 const columns: ColumnsType<DataType> = [
@@ -36,16 +47,71 @@ const columns: ColumnsType<DataType> = [
     dataIndex: "lotteryDrawTime",
     key: "lotteryDrawTime",
   },
+  //   {
+  //     title: "num",
+  //     dataIndex: "lotteryGameNum",
+  //     key: "lotteryGameNum",
+  //   },
   {
-    title: "num",
-    dataIndex: "lotteryGameNum",
-    key: "lotteryGameNum",
+    title: "same1",
+    dataIndex: "same1",
+    key: "same1",
+  },
+  {
+    title: "same2",
+    dataIndex: "same2",
+    key: "same2",
+  },
+  {
+    title: "same3",
+    dataIndex: "same3",
+    key: "same3",
+  },
+  {
+    title: "same4",
+    dataIndex: "same4",
+    key: "same4",
+  },
+  {
+    title: "same5",
+    dataIndex: "same5",
+    key: "same5",
+  },
+  {
+    title: "same6",
+    dataIndex: "same6",
+    key: "same6",
+  },
+  {
+    title: "same7",
+    dataIndex: "same7",
+    key: "same7",
+  },
+  {
+    title: "same8",
+    dataIndex: "same8",
+    key: "same8",
+  },
+  {
+    title: "same9",
+    dataIndex: "same9",
+    key: "same9",
+  },
+  {
+    title: "same10",
+    dataIndex: "same10",
+    key: "same10",
+  },
+  {
+    title: "total0",
+    dataIndex: "total0",
+    key: "total0",
   },
 ];
 
 const rateColumns = [
   {
-    title: "数据",
+    title: "data",
     dataIndex: "name",
     key: "name",
   },
@@ -71,12 +137,28 @@ interface RateItem {
   editable: boolean;
 }
 
+interface ResItem {
+  key: string;
+  name: string;
+  same1: string;
+  same2: string;
+  same3: string;
+  same4: string;
+  same5: string;
+  same6: string;
+  same7: string;
+  same8: string;
+  same9: string;
+  same10: string;
+  editable: boolean;
+}
+
 interface EditableCellProps extends React.HTMLAttributes<HTMLElement> {
   editing: boolean;
   dataIndex: string;
   title: any;
   inputType: "number" | "text";
-  record: RateItem;
+  record: ResItem;
   index: number;
   children: React.ReactNode;
 }
@@ -122,23 +204,52 @@ const Project: FC<HomeProps> = (props) => {
 
   const query = () => {
     api.get("/projects").then((res) => {
-      const data = res.data
-        .map((item: any) => {
-          return {
+      const arr = res.data.sort(
+        (a: any, b: any) =>
+          new Date(b.date.slice(0, 10)).getTime() -
+          new Date(a.date.slice(0, 10)).getTime()
+      );
+      const data: any[] = [];
+
+      //和前面10组data相同的data有多少，red
+      arr.forEach((item: any, index: number) => {
+        if (index < arr.length - 11) {
+          let same: any = {};
+          let j = 0;
+          for (let i = 0; i < 10; i++) {
+            same["same" + (i + 1)] = getSameNum(
+              item.red,
+              arr[index + i + 1].red
+            );
+            if (same["same" + (i + 1)] == 0) {
+              j++;
+            }
+          }
+          data.push({
             lotteryDrawTime: item.date,
             lotteryDrawResult: item.red + "," + item.blue,
             lotteryGameNum: "02",
-          };
-        })
-        .slice(0, 100);
-      setData(
-        (data as DataType[]).sort(
-          (a, b) =>
-            new Date(b.lotteryDrawTime.slice(0, 10)).getTime() -
-            new Date(a.lotteryDrawTime.slice(0, 10)).getTime()
-        )
-      );
+            ...same,
+            id: index,
+            total0: j,
+          });
+        }
+      });
+
+      setData(data as DataType[]);
     });
+  };
+
+  const getSameNum = (toStr: string, fromStr: string) => {
+    const arr = toStr.split(",");
+    const arr2 = fromStr.split(",");
+    let i = 0;
+    arr.forEach((item: string, index: number) => {
+      if (item == arr2[index]) {
+        i++;
+      }
+    });
+    return i;
   };
 
   const countHandle = () => {
@@ -172,6 +283,156 @@ const Project: FC<HomeProps> = (props) => {
     setRate2Data(arr2);
   };
 
+  const [form] = Form.useForm();
+  const [resData, setResData] = useState<ResItem[]>([]);
+  const [editingKey, setEditingKey] = useState("");
+
+  const isEditing = (record: ResItem) => record.key === editingKey;
+
+  const edit = (record: Partial<ResItem> & { key: React.Key }) => {
+    form.setFieldsValue({ name: "", age: "", address: "", ...record });
+    setEditingKey(record.key);
+  };
+
+  const cancel = () => {
+    setEditingKey("");
+  };
+
+  const save = async (key: React.Key) => {
+    try {
+      const row = (await form.validateFields()) as ResItem;
+
+      const newData = [...rateData];
+      const index = newData.findIndex((item) => key === item.key);
+      if (index > -1) {
+        const item = newData[index];
+        newData.splice(index, 1, {
+          ...item,
+          ...row,
+        });
+        setResData(newData);
+        setEditingKey("");
+      } else {
+        newData.push(row);
+        setResData(newData);
+        setEditingKey("");
+      }
+    } catch (errInfo) {
+      console.log("Validate Failed:", errInfo);
+    }
+  };
+
+  const tmpColumns = [
+    { title: "data", dataIndex: "name" },
+    {
+      title: "same1",
+      dataIndex: "same1",
+      editable: true,
+    },
+    {
+      title: "same2",
+      dataIndex: "same2",
+      editable: true,
+    },
+    {
+      title: "same3",
+      dataIndex: "same3",
+      editable: true,
+    },
+    {
+      title: "same4",
+      dataIndex: "same4",
+      editable: true,
+    },
+    {
+      title: "same5",
+      dataIndex: "same5",
+      editable: true,
+    },
+    {
+      title: "same6",
+      dataIndex: "same6",
+      editable: true,
+    },
+    {
+      title: "same7",
+      dataIndex: "same7",
+      editable: true,
+    },
+    {
+      title: "same8",
+      dataIndex: "same8",
+      editable: true,
+    },
+    {
+      title: "same9",
+      dataIndex: "same9",
+      editable: true,
+    },
+    {
+      title: "same10",
+      dataIndex: "same10",
+      editable: true,
+    },
+    {
+      title: "total0",
+      dataIndex: "total0",
+      editable: true,
+    },
+    {
+      title: "operation",
+      dataIndex: "operation",
+      render: (_: any, record: ResItem) => {
+        const editable = isEditing(record);
+        return editable ? (
+          <span>
+            <Typography.Link
+              onClick={() => save(record.key)}
+              style={{ marginRight: 8 }}
+            >
+              Save
+            </Typography.Link>
+            <Popconfirm title="Sure to cancel?" onConfirm={cancel}>
+              <a>Cancel</a>
+            </Popconfirm>
+          </span>
+        ) : (
+          <Typography.Link
+            disabled={editingKey !== ""}
+            onClick={() => edit(record)}
+          >
+            Edit
+          </Typography.Link>
+        );
+      },
+    },
+  ];
+
+  const mergedColumns = tmpColumns.map((col) => {
+    if (!col.editable) {
+      return col;
+    }
+    return {
+      ...col,
+      onCell: (record: ResItem) => ({
+        record,
+        inputType: col.dataIndex === "age" ? "number" : "text",
+        dataIndex: col.dataIndex,
+        title: col.title,
+        editing: isEditing(record),
+      }),
+      //   sorter: (a: any, b: any) =>
+      //     Number(a[col.dataIndex]) - Number(b[col.dataIndex]),
+    };
+  }) as ColumnsType<ResItem>;
+
+  const addHandle = () => {
+    setResData([
+      ...resData,
+      { id: resData.length + 1, name: data[0].lotteryDrawResult },
+    ] as ResItem[]);
+  };
+
   useEffect(() => {}, []);
   return (
     <div>
@@ -199,7 +460,10 @@ const Project: FC<HomeProps> = (props) => {
         rowKey={"name"}
         style={{ marginTop: 20 }}
       />
-      {/* <Form form={form} component={false}>
+      <Button type="primary" icon={<SearchOutlined />} onClick={addHandle}>
+        Add
+      </Button>
+      <Form form={form} component={false}>
         <Table
           components={{
             body: {
@@ -207,13 +471,13 @@ const Project: FC<HomeProps> = (props) => {
             },
           }}
           bordered
-          dataSource={rateData}
+          dataSource={resData}
           columns={mergedColumns}
           rowClassName="editable-row"
           pagination={false}
           style={{ marginTop: 20, marginBottom: 20 }}
         />
-      </Form> */}
+      </Form>
     </div>
   );
 };
