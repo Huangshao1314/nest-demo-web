@@ -38,17 +38,25 @@ interface DataType {
 }
 
 const columns: ColumnsType<DataType> = [
-  {
-    title: "result",
-    dataIndex: "lotteryDrawResult",
-    key: "lotteryDrawResult",
-    render: (text) => <a>{text}</a>,
-  },
-  {
-    title: "time",
-    dataIndex: "lotteryDrawTime",
-    key: "lotteryDrawTime",
-  },
+  //   {
+  //     title: "index",
+  //     key: "index",
+  //     render(value, record, index) {
+  //       return <span>{index}</span>;
+  //     },
+  //   },
+  //   {
+  //     title: "result",
+  //     dataIndex: "lotteryDrawResult",
+  //     key: "lotteryDrawResult",
+  //     render: (text) => <a>{text}</a>,
+  //     fixed: true,
+  //   },
+  //   {
+  //     title: "time",
+  //     dataIndex: "lotteryDrawTime",
+  //     key: "lotteryDrawTime",
+  //   },
   //   {
   //     title: "num",
   //     dataIndex: "lotteryGameNum",
@@ -108,6 +116,7 @@ const columns: ColumnsType<DataType> = [
     title: "total0",
     dataIndex: "total0",
     key: "total0",
+    sorter: (a: any, b: any) => Number(a.total0) - Number(b.total0),
   },
   {
     title: "blue1",
@@ -228,12 +237,10 @@ const Project: FC<HomeProps> = (props) => {
         if (index < arr.length - 11) {
           let same: any = {};
           let j = 0;
-          for (let i = 0; i < 10; i++) {
-            same["same" + (i + 1)] = getSameNum(
-              item.red,
-              arr[index + i + 1].red
-            );
-            if (same["same" + (i + 1)] == 0) {
+          for (let i = 1; i < 11; i++) {
+            same["same" + i] =
+              getSameNum(item.red, arr[index + i].red) === 0 ? 0 : 1;
+            if (same["same" + i] == 0) {
               j++;
             }
           }
@@ -263,7 +270,7 @@ const Project: FC<HomeProps> = (props) => {
         }
       });
 
-      setData(data as DataType[]);
+      setData((data as DataType[]).slice(0, 100).reverse());
     });
   };
 
@@ -271,8 +278,8 @@ const Project: FC<HomeProps> = (props) => {
     const arr = toStr.split(",");
     const arr2 = fromStr.split(",");
     let i = 0;
-    arr.forEach((item: string, index: number) => {
-      if (item == arr2[index]) {
+    arr.forEach((item: string) => {
+      if (arr2.includes(item)) {
         i++;
       }
     });
@@ -464,6 +471,74 @@ const Project: FC<HomeProps> = (props) => {
     ] as ResItem[]);
   };
 
+  const combinations = (arr: number[], k: number) => {
+    const result: any[] = [];
+
+    function backtrack(temp: any[], start: number) {
+      if (temp.length === k) {
+        result.push([...temp]);
+        return;
+      }
+
+      for (let i = start; i < arr.length; i++) {
+        temp.push(arr[i]);
+        backtrack(temp, i + 1);
+        temp.pop();
+      }
+    }
+
+    backtrack([], 0);
+    return result;
+  };
+
+  const measureHandle = () => {
+    if (data.length === 0) {
+      return;
+    }
+    let redArr: any[] = [];
+    for (let i = 1; i < 34; i++) {
+      if (i < 10) {
+        redArr.push("0" + i);
+      } else {
+        redArr.push(i + "");
+      }
+    }
+    const numbers = [1, 1, 0, 1, 0, 0, 1, 1, 1, 1];
+    const numArr: number[] = [];
+    numbers.forEach((item, index) => {
+      if (item == 0) {
+        redArr = redArr.filter(
+          (el) =>
+            !data[index].lotteryDrawResult.split(",").slice(0, 6).includes(el)
+        );
+      } else {
+        numArr.push(index);
+      }
+    });
+    const allCombinations = combinations(redArr, 6);
+    const result: any = [];
+    allCombinations.forEach((item) => {
+      let rateNum = 0;
+      numArr.forEach((num) => {
+        let isSame = false;
+        let arr = data[num].lotteryDrawResult.split(",");
+        for (let i = 0; i < arr.length - 1; i++) {
+          if (item.includes(arr[i])) {
+            isSame = true;
+            break;
+          }
+        }
+        if (isSame) {
+          rateNum++;
+        }
+      });
+      if (rateNum === numArr.length) {
+        result.push(item);
+      }
+    });
+    console.log("result: ", result);
+  };
+
   useEffect(() => {}, []);
   return (
     <div>
@@ -475,9 +550,13 @@ const Project: FC<HomeProps> = (props) => {
         dataSource={data}
         rowKey={"id"}
         style={{ marginTop: 20 }}
+        pagination={false}
       />
       <Button type="primary" icon={<SearchOutlined />} onClick={countHandle}>
         计算
+      </Button>
+      <Button type="primary" icon={<SearchOutlined />} onClick={measureHandle}>
+        test
       </Button>
       <Table
         columns={rateColumns}
