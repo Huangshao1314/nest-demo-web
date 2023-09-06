@@ -41,30 +41,30 @@ interface DataType {
 }
 
 const columns: ColumnsType<DataType> = [
-  //   {
-  //     title: "index",
-  //     key: "index",
-  //     render(value, record, index) {
-  //       return <span>{index}</span>;
-  //     },
-  //   },
-  // {
-  //   title: "result",
-  //   dataIndex: "lotteryDrawResult",
-  //   key: "lotteryDrawResult",
-  //   render: (text, record) => <a>{record.red + "," + record.blue}</a>,
-  //   fixed: true,
-  // },
-  //   {
-  //     title: "time",
-  //     dataIndex: "lotteryDrawTime",
-  //     key: "lotteryDrawTime",
-  //   },
-  //   {
-  //     title: "num",
-  //     dataIndex: "lotteryGameNum",
-  //     key: "lotteryGameNum",
-  //   },
+    {
+      title: "index",
+      key: "index",
+      render(value, record, index) {
+        return <span>{index}</span>;
+      },
+    },
+  {
+    title: "result",
+    dataIndex: "lotteryDrawResult",
+    key: "lotteryDrawResult",
+    render: (text, record) => <a>{record.red + "," + record.blue}</a>,
+    fixed: true,
+  },
+    {
+      title: "time",
+      dataIndex: "lotteryDrawTime",
+      key: "lotteryDrawTime",
+    },
+    {
+      title: "num",
+      dataIndex: "lotteryGameNum",
+      key: "lotteryGameNum",
+    },
   {
     title: "same1",
     dataIndex: "same1",
