@@ -19,7 +19,8 @@ interface HomeProps {}
 
 interface DataType {
   id: number;
-  lotteryDrawResult: string;
+  blue: string;
+  red: string;
   lotteryDrawTime: string;
   lotteryGameNum: string;
   same1: string;
@@ -33,6 +34,8 @@ interface DataType {
   same9: string;
   same10: string;
   total0: string;
+  series: string;
+  regionRate: string;
   blue1: string;
   blue2: string;
 }
@@ -45,13 +48,13 @@ const columns: ColumnsType<DataType> = [
   //       return <span>{index}</span>;
   //     },
   //   },
-  //   {
-  //     title: "result",
-  //     dataIndex: "lotteryDrawResult",
-  //     key: "lotteryDrawResult",
-  //     render: (text) => <a>{text}</a>,
-  //     fixed: true,
-  //   },
+  // {
+  //   title: "result",
+  //   dataIndex: "lotteryDrawResult",
+  //   key: "lotteryDrawResult",
+  //   render: (text, record) => <a>{record.red + "," + record.blue}</a>,
+  //   fixed: true,
+  // },
   //   {
   //     title: "time",
   //     dataIndex: "lotteryDrawTime",
@@ -117,6 +120,16 @@ const columns: ColumnsType<DataType> = [
     dataIndex: "total0",
     key: "total0",
     sorter: (a: any, b: any) => Number(a.total0) - Number(b.total0),
+  },
+  {
+    title: "series",
+    dataIndex: "series",
+    key: "series",
+  },
+  {
+    title: "regionRate",
+    dataIndex: "regionRate",
+    key: "regionRate",
   },
   {
     title: "blue1",
@@ -232,14 +245,13 @@ const Project: FC<HomeProps> = (props) => {
       );
       const data: any[] = [];
 
-      //和前面10组data相同的data有多少，red
+      // 和前面10组data相同的data有多少，red
       arr.forEach((item: any, index: number) => {
         if (index < arr.length - 11) {
           let same: any = {};
           let j = 0;
           for (let i = 1; i < 11; i++) {
-            same["same" + i] =
-              getSameNum(item.red, arr[index + i].red) === 0 ? 0 : 1;
+            same["same" + i] = getSameNum(item.red, arr[index + i].red);
             if (same["same" + i] == 0) {
               j++;
             }
@@ -257,21 +269,68 @@ const Project: FC<HomeProps> = (props) => {
               }
             }
           }
+          const nums = item.red.split(",").map((s: string) => Number(s));
           data.push({
             lotteryDrawTime: item.date,
-            lotteryDrawResult: item.red + "," + item.blue,
+            red: item.red,
+            blue: item.blue,
             lotteryGameNum: "02",
             ...same,
             id: index,
             total0: j,
             blue1,
             blue2,
+            series: findLongestConsecutive(nums),
+            regionRate: calculateZoneRatio(nums),
           });
         }
       });
 
-      setData((data as DataType[]).slice(0, 100).reverse());
+      setData((data as DataType[]).slice(0, 100));
     });
+  };
+
+  // 检查连号
+  const findLongestConsecutive = (nums: number[]) => {
+    if (nums.length === 0) {
+      return 0;
+    }
+
+    const numSet = new Set(nums);
+    let maxLength = 0;
+
+    for (const num of numSet) {
+      if (!numSet.has(num - 1)) {
+        let currentNum = num;
+        let currentLength = 1;
+
+        while (numSet.has(currentNum + 1)) {
+          currentNum += 1;
+          currentLength += 1;
+        }
+
+        maxLength = Math.max(maxLength, currentLength);
+      }
+    }
+
+    return maxLength;
+  };
+
+  // 区间比
+  const calculateZoneRatio = (nums: number[]) => {
+    let n1 = 0;
+    let n2 = 0;
+    let n3 = 0;
+    nums.forEach((item) => {
+      if (item > 0 && item < 12) {
+        n1++;
+      } else if (item > 11 && item < 23) {
+        n2++;
+      } else {
+        n3++;
+      }
+    });
+    return n1 + ":" + n2 + ":" + n3;
   };
 
   const getSameNum = (toStr: string, fromStr: string) => {
@@ -293,11 +352,11 @@ const Project: FC<HomeProps> = (props) => {
     const arr6 = Array(34).fill(0);
     const arr7 = Array(17).fill(0);
     data.forEach((item) => {
-      const tmp = item.lotteryDrawResult.split(",");
+      const tmp = item.red.split(",");
       for (let i = 0; i < 6; i++) {
         arr6[Number(tmp[i])] += 1;
       }
-      arr7[Number(tmp[6])] += 1;
+      arr7[Number(item.blue)] += 1;
     });
     const arr = [];
     for (let i = 1; i < 34; i++) {
@@ -465,7 +524,7 @@ const Project: FC<HomeProps> = (props) => {
       ...resData,
       {
         id: resData.length + 1,
-        name: data[0].lotteryDrawResult,
+        name: data[0].red,
         key: resData.length + 1,
       },
     ] as ResItem[]);
@@ -508,8 +567,7 @@ const Project: FC<HomeProps> = (props) => {
     numbers.forEach((item, index) => {
       if (item == 0) {
         redArr = redArr.filter(
-          (el) =>
-            !data[index].lotteryDrawResult.split(",").slice(0, 6).includes(el)
+          (el) => !data[index].red.split(",").includes(el)
         );
       } else {
         numArr.push(index);
@@ -521,8 +579,8 @@ const Project: FC<HomeProps> = (props) => {
       let rateNum = 0;
       numArr.forEach((num) => {
         let isSame = false;
-        let arr = data[num].lotteryDrawResult.split(",");
-        for (let i = 0; i < arr.length - 1; i++) {
+        let arr = data[num].red.split(",");
+        for (let i = 0; i < arr.length; i++) {
           if (item.includes(arr[i])) {
             isSame = true;
             break;
@@ -536,7 +594,6 @@ const Project: FC<HomeProps> = (props) => {
         result.push(item);
       }
     });
-    console.log("result: ", result);
   };
 
   useEffect(() => {}, []);
