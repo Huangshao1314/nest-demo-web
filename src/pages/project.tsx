@@ -854,10 +854,14 @@ const Project: FC<HomeProps> = (props) => {
       <Button type="primary" icon={<SearchOutlined />} onClick={queryHandle}>
         query
       </Button>
-      <Button type="primary" icon={<SearchOutlined />} onClick={resetHandle}>
+      <Button
+        style={{ marginLeft: 4, marginRight: 4 }}
+        type="primary"
+        onClick={resetHandle}
+      >
         重置
       </Button>
-      <Button type="primary" icon={<SearchOutlined />} onClick={deleteHandle}>
+      <Button type="primary" onClick={deleteHandle}>
         只选前十个
       </Button>
       <InputNumber defaultValue={1} min={1} max={5} onChange={onChange} />
