@@ -294,7 +294,7 @@ const Project: FC<HomeProps> = (props) => {
               onClick={() => redUpHandle(record.index - 1)}
               style={{ marginRight: 10 }}
             >
-              相同分析
+              对比
             </Button>
           </div>
         );
