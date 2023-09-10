@@ -3,9 +3,6 @@ import { SearchOutlined } from "@ant-design/icons";
 import {
   Button,
   Table,
-  Tooltip,
-  Space,
-  Tag,
   Input,
   Form,
   InputNumber,
@@ -14,7 +11,6 @@ import {
 } from "antd";
 import api from "../api/http";
 import type { ColumnsType } from "antd/es/table";
-
 interface HomeProps {}
 
 interface DataType {
