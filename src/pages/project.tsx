@@ -1,4 +1,4 @@
-import React, { FC, useEffect, useState } from "react";
+import React, { FC, Fragment, useEffect, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
 import {
   Button,
@@ -11,13 +11,19 @@ import {
   InputNumber,
   Typography,
   Popconfirm,
+  Checkbox,
 } from "antd";
 import api from "../api/http";
 import type { ColumnsType } from "antd/es/table";
+import type { CheckboxChangeEvent } from "antd/es/checkbox";
+import { colorArr, dataSource, originBlue, originRed } from "./data";
+import "./project.scss";
+import { cloneDeep } from "lodash";
 
 interface HomeProps {}
 
 interface DataType {
+  seq: number;
   id: number;
   blue: string;
   red: string;
@@ -41,30 +47,28 @@ interface DataType {
 }
 
 const columns: ColumnsType<DataType> = [
-    {
-      title: "index",
-      key: "index",
-      render(value, record, index) {
-        return <span>{index}</span>;
-      },
-    },
+  {
+    title: "seq",
+    dataIndex: "seq",
+    key: "seq",
+    fixed: true,
+  },
   {
     title: "result",
     dataIndex: "lotteryDrawResult",
     key: "lotteryDrawResult",
     render: (text, record) => <a>{record.red + "," + record.blue}</a>,
-    fixed: true,
   },
-    {
-      title: "time",
-      dataIndex: "lotteryDrawTime",
-      key: "lotteryDrawTime",
-    },
-    {
-      title: "num",
-      dataIndex: "lotteryGameNum",
-      key: "lotteryGameNum",
-    },
+  {
+    title: "time",
+    dataIndex: "lotteryDrawTime",
+    key: "lotteryDrawTime",
+  },
+  {
+    title: "num",
+    dataIndex: "lotteryGameNum",
+    key: "lotteryGameNum",
+  },
   {
     title: "same1",
     dataIndex: "same1",
@@ -235,7 +239,177 @@ const Project: FC<HomeProps> = (props) => {
   const [data, setData] = useState<DataType[]>([]);
   const [rateData, setRateData] = useState<any[]>([]);
   const [rate2Data, setRate2Data] = useState<any[]>([]);
+  const [tableData, setTableData] = useState<any[]>([]);
+  const [tableCopyData, setTableCopyData] = useState<any[]>([]);
 
+  const columnsTable = [
+    {
+      title: "index",
+      key: "index",
+      dataIndex: "index",
+      width: 20,
+    },
+    {
+      title: "seq",
+      key: "seq",
+      dataIndex: "seq",
+      width: 20,
+    },
+    { title: "开奖期数", key: "date", dataIndex: "date", width: 150 },
+    {
+      title: "开奖号码",
+      key: "number",
+      width: 400,
+      render: (text: any, record: any) => {
+        return (
+          <div>
+            {record.red.map((item: any) => {
+              return (
+                <Fragment key={JSON.stringify(item)}>
+                  <span
+                    className="red-boll"
+                    style={{ background: item.background }}
+                  >
+                    {item.value}
+                  </span>
+                </Fragment>
+              );
+            })}
+            <span
+              className="red-boll"
+              style={{ background: record.blue.background }}
+            >
+              {record.blue.value}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      title: "操作",
+      render: (text: any, record: any, index: number) => {
+        return (
+          <div>
+            <Button
+              onClick={() => redUpHandle(record.index - 1)}
+              style={{ marginRight: 10 }}
+            >
+              相同分析
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  const redUpHandle = (index: number) => {
+    const redArr = tableData[index].red;
+    const blueObj = tableData[index].blue;
+    setTableData(
+      tableData.map((item, ind) => {
+        let seq: any = "";
+        let red = item.red.map((el: any) => ({
+          value: el.value,
+          background: "#d9d9d9",
+        }));
+        let blue = { value: item.blue.value, background: "#d9d9d9" };
+
+        if (ind > index && ind < 20 + index) {
+          // 对比红色
+          seq = ind - index;
+          red = item.red.map((el: any) => {
+            let background = "#d9d9d9";
+            const res = redArr.findIndex((f: any) => f.value == el.value);
+            if (res != -1) {
+              background = colorArr[res];
+            }
+            return {
+              value: el.value,
+              background,
+            };
+          });
+        }
+        if (index == ind) {
+          red = item.red.map((el: any, i: number) => {
+            return {
+              value: el.value,
+              background: colorArr[i],
+            };
+          });
+          blue.background = originBlue;
+          seq = 0;
+        }
+        if (ind > index && ind < 20 + index) {
+          if (item.blue.value == blueObj.value) {
+            blue.background = originBlue;
+          }
+        }
+        return {
+          ...item,
+          red,
+          seq,
+          blue,
+        };
+      })
+    );
+  };
+
+  const queryHandle = () => {
+    api.get("/projects").then((res) => {
+      const arr = res.data.sort(
+        (a: any, b: any) =>
+          new Date(b.date.slice(0, 10)).getTime() -
+          new Date(a.date.slice(0, 10)).getTime()
+      );
+      const data = arr.map((item: any, index: number) => {
+        const red = item.red.split(",").map((str: any) => {
+          return {
+            value: str,
+            background: "#d9d9d9",
+          };
+        });
+        return {
+          id: item.id,
+          date: item.date,
+          index: index + 1,
+          seq: "",
+          red,
+          blue: {
+            value: item.blue,
+            background: "#d9d9d9",
+          },
+        };
+      });
+      setTableData(data);
+    });
+  };
+
+  const resetHandle = () => {
+    console.log(tableCopyData);
+    setTableData(
+      (tableCopyData.length ? tableCopyData : tableData).map((item) => {
+        let red = item.red.map((el: any) => ({
+          value: el.value,
+          background: originRed,
+        }));
+        return {
+          ...item,
+          red,
+          blue: {
+            value: item.blue.value,
+            background: originBlue,
+          },
+        };
+      })
+    );
+  };
+
+  const deleteHandle = () => {
+    if (tableData.length > 10) {
+      setTableCopyData(cloneDeep(tableData));
+    }
+    setTableData(tableData.slice(0, 10));
+  };
   const query = () => {
     api.get("/projects").then((res) => {
       const arr = res.data.sort(
@@ -244,14 +418,18 @@ const Project: FC<HomeProps> = (props) => {
           new Date(a.date.slice(0, 10)).getTime()
       );
       const data: any[] = [];
+      let seq = 0;
 
       // 和前面10组data相同的data有多少，red
       arr.forEach((item: any, index: number) => {
         if (index < arr.length - 11) {
           let same: any = {};
           let j = 0;
+          let sameStr = "";
           for (let i = 1; i < 11; i++) {
-            same["same" + i] = getSameNum(item.red, arr[index + i].red);
+            same["same" + i] =
+              getSameNum(item.red, arr[index + i].red) == 0 ? 0 : 1;
+            sameStr += same["same" + i];
             if (same["same" + i] == 0) {
               j++;
             }
@@ -270,6 +448,7 @@ const Project: FC<HomeProps> = (props) => {
             }
           }
           const nums = item.red.split(",").map((s: string) => Number(s));
+          seq++;
           data.push({
             lotteryDrawTime: item.date,
             red: item.red,
@@ -282,11 +461,39 @@ const Project: FC<HomeProps> = (props) => {
             blue2,
             series: findLongestConsecutive(nums),
             regionRate: calculateZoneRatio(nums),
+            seq,
+            sameStr,
           });
         }
       });
+      let t = 0;
+      let k = 0;
+      let y = 0;
+      let ttt: any[] = [];
+      let obj: any = {};
+      data.forEach((item) => {
+        if (item.regionRate === "2:2:2") {
+          if (obj[item.sameStr] == undefined) {
+            obj[item.sameStr] = 1;
+          } else {
+            obj[item.sameStr] += 1;
+          }
+        }
+      });
+      for (let p in obj) {
+        ttt.push({ name: p, value: obj[p] });
+      }
+      // console.log("rate", k / t);
+      // console.log("obj: ", obj);
+      console.log(
+        "ttt: ",
+        ttt.sort((a, b) => a.value - b.value)
+      );
 
-      setData((data as DataType[]).slice(0, 100));
+      setData(
+        (data as DataType[]).slice(0, 100)
+        // .filter((item) => item.regionRate == "2:2:2")
+      );
     });
   };
 
@@ -379,6 +586,8 @@ const Project: FC<HomeProps> = (props) => {
   const [form] = Form.useForm();
   const [resData, setResData] = useState<ResItem[]>([]);
   const [editingKey, setEditingKey] = useState("");
+  const [value, setValue] = useState<number>(1);
+  const [checked, setChecked] = useState<boolean>(true);
 
   const isEditing = (record: ResItem) => record.key === editingKey;
 
@@ -562,7 +771,8 @@ const Project: FC<HomeProps> = (props) => {
         redArr.push(i + "");
       }
     }
-    const numbers = [1, 1, 0, 1, 0, 0, 1, 1, 1, 1];
+    const numbers = dataSource[value - 1];
+
     const numArr: number[] = [];
     numbers.forEach((item, index) => {
       if (item == 0) {
@@ -577,26 +787,58 @@ const Project: FC<HomeProps> = (props) => {
     const result: any = [];
     allCombinations.forEach((item) => {
       let rateNum = 0;
+
       numArr.forEach((num) => {
         let isSame = false;
+        let sameNum = 0;
         let arr = data[num].red.split(",");
         for (let i = 0; i < arr.length; i++) {
           if (item.includes(arr[i])) {
             isSame = true;
-            break;
+            sameNum++;
           }
         }
-        if (isSame) {
+        if (isSame && sameNum < 3) {
           rateNum++;
         }
       });
-      if (rateNum === numArr.length) {
+      let isRegion = true;
+      let n1 = 0;
+      let n2 = 0;
+      let n3 = 0;
+      let nums = item.map((f: any) => {
+        const n = Number(f);
+        if (n > 0 && n < 12) {
+          n1++;
+        } else if (n > 11 && n < 23) {
+          n2++;
+        } else {
+          n3++;
+        }
+        return n;
+      });
+      if (!["2:2:2"].includes(n1 + ":" + n2 + ":" + n3)) {
+        isRegion = false;
+      }
+      if (
+        rateNum === numArr.length &&
+        isRegion &&
+        findLongestConsecutive(nums) == (checked ? 2 : 1)
+      ) {
         result.push(item);
       }
     });
+    console.log("result: ", result);
   };
 
   useEffect(() => {}, []);
+
+  const onChange = (value: any) => {
+    setValue(Number(value));
+  };
+  const onChangechecked = (e: CheckboxChangeEvent) => {
+    setChecked(e.target.checked);
+  };
   return (
     <div>
       <Button type="primary" icon={<SearchOutlined />} onClick={query}>
@@ -606,15 +848,31 @@ const Project: FC<HomeProps> = (props) => {
         columns={columns}
         dataSource={data}
         rowKey={"id"}
-        style={{ marginTop: 20 }}
+        style={{ marginTop: 20, marginBottom: 20 }}
         pagination={false}
       />
-      <Button type="primary" icon={<SearchOutlined />} onClick={countHandle}>
-        计算
+      <Button type="primary" icon={<SearchOutlined />} onClick={queryHandle}>
+        query
       </Button>
-      <Button type="primary" icon={<SearchOutlined />} onClick={measureHandle}>
-        test
+      <Button type="primary" icon={<SearchOutlined />} onClick={resetHandle}>
+        重置
       </Button>
+      <Button type="primary" icon={<SearchOutlined />} onClick={deleteHandle}>
+        只选前十个
+      </Button>
+      <InputNumber defaultValue={1} min={1} max={5} onChange={onChange} />
+      <Checkbox checked={checked} onChange={onChangechecked}>
+        连
+      </Checkbox>
+
+      {/* 双色球展示 */}
+      <Table
+        columns={columnsTable}
+        dataSource={tableData}
+        rowKey={"id"}
+        style={{ marginTop: 20, marginBottom: 20 }}
+      />
+
       <Table
         columns={rateColumns}
         dataSource={rateData}
