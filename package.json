@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://huangshao1314.github.io/nest-demo-web/",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
