@@ -385,7 +385,6 @@ const Project: FC<HomeProps> = (props) => {
   };
 
   const resetHandle = () => {
-    console.log(tableCopyData);
     setTableData(
       (tableCopyData.length ? tableCopyData : tableData).map((item) => {
         let red = item.red.map((el: any) => ({
@@ -410,6 +409,42 @@ const Project: FC<HomeProps> = (props) => {
     }
     setTableData(tableData.slice(0, 10));
   };
+
+  // 连号分析
+  const seqHandle = () => {
+    setTableData(
+      tableData.map((item) => {
+        let red = item.red.map((el: any, index: number) => {
+          let background = "#d9d9d9";
+          if (
+            index < 5 &&
+            Number(el.value) + 1 == Number(item.red[index + 1].value)
+          ) {
+            background = originRed;
+          }
+          if (
+            index > 0 &&
+            Number(el.value) - 1 == Number(item.red[index - 1].value)
+          ) {
+            background = originRed;
+          }
+          return {
+            value: el.value,
+            background,
+          };
+        });
+        return {
+          ...item,
+          red,
+          blue: {
+            value: item.blue.value,
+            background: "#d9d9d9",
+          },
+        };
+      })
+    );
+  };
+
   const query = () => {
     api.get("/projects").then((res) => {
       const arr = res.data.sort(
@@ -483,12 +518,6 @@ const Project: FC<HomeProps> = (props) => {
       for (let p in obj) {
         ttt.push({ name: p, value: obj[p] });
       }
-      // console.log("rate", k / t);
-      // console.log("obj: ", obj);
-      console.log(
-        "ttt: ",
-        ttt.sort((a, b) => a.value - b.value)
-      );
 
       setData(
         (data as DataType[]).slice(0, 100)
@@ -828,7 +857,6 @@ const Project: FC<HomeProps> = (props) => {
         result.push(item);
       }
     });
-    console.log("result: ", result);
   };
 
   useEffect(() => {}, []);
@@ -851,23 +879,32 @@ const Project: FC<HomeProps> = (props) => {
         style={{ marginTop: 20, marginBottom: 20 }}
         pagination={false}
       />
-      <Button type="primary" icon={<SearchOutlined />} onClick={queryHandle}>
-        query
+      <Button type="primary" onClick={queryHandle}>
+        置灰
       </Button>
+
       <Button
-        style={{ marginLeft: 4, marginRight: 4 }}
+        style={{ marginLeft: 8, marginRight: 8 }}
+        type="primary"
+        onClick={deleteHandle}
+      >
+        只选前十个
+      </Button>
+      <Button type="primary" onClick={seqHandle}>
+        连号分析
+      </Button>
+
+      <Button
         type="primary"
         onClick={resetHandle}
+        style={{ marginLeft: 8, marginRight: 8 }}
       >
         重置
       </Button>
-      <Button type="primary" onClick={deleteHandle}>
-        只选前十个
-      </Button>
-      <InputNumber defaultValue={1} min={1} max={5} onChange={onChange} />
+      {/* <InputNumber defaultValue={1} min={1} max={5} onChange={onChange} />
       <Checkbox checked={checked} onChange={onChangechecked}>
         连
-      </Checkbox>
+      </Checkbox> */}
 
       {/* 双色球展示 */}
       <Table
