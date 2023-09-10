@@ -13,12 +13,12 @@ import {
   Popconfirm,
   Checkbox,
 } from "antd";
-import api from "../api/http";
 import type { ColumnsType } from "antd/es/table";
 import type { CheckboxChangeEvent } from "antd/es/checkbox";
 import { colorArr, dataSource, originBlue, originRed } from "./data";
 import "./project.scss";
 import { cloneDeep } from "lodash";
+import outData from "../../out.json";
 
 interface HomeProps {}
 
@@ -241,6 +241,8 @@ const Project: FC<HomeProps> = (props) => {
   const [rate2Data, setRate2Data] = useState<any[]>([]);
   const [tableData, setTableData] = useState<any[]>([]);
   const [tableCopyData, setTableCopyData] = useState<any[]>([]);
+  const [startIndex, setStartIndex] = useState(0);
+  const [isDelete, setIsDelete] = useState(false);
 
   const columnsTable = [
     {
@@ -303,6 +305,7 @@ const Project: FC<HomeProps> = (props) => {
   ];
 
   const redUpHandle = (index: number) => {
+    setStartIndex(index);
     const redArr = tableData[index].red;
     const blueObj = tableData[index].blue;
     setTableData(
@@ -355,36 +358,36 @@ const Project: FC<HomeProps> = (props) => {
   };
 
   const queryHandle = () => {
-    api.get("/projects").then((res) => {
-      const arr = res.data.sort(
-        (a: any, b: any) =>
-          new Date(b.date.slice(0, 10)).getTime() -
-          new Date(a.date.slice(0, 10)).getTime()
-      );
-      const data = arr.map((item: any, index: number) => {
-        const red = item.red.split(",").map((str: any) => {
-          return {
-            value: str,
-            background: "#d9d9d9",
-          };
-        });
+    setStartIndex(0);
+    const arr = outData.sort(
+      (a: any, b: any) =>
+        new Date(b.date.slice(0, 10)).getTime() -
+        new Date(a.date.slice(0, 10)).getTime()
+    );
+    const data = arr.map((item: any, index: number) => {
+      const red = item.red.split(",").map((str: any) => {
         return {
-          id: item.id,
-          date: item.date,
-          index: index + 1,
-          seq: "",
-          red,
-          blue: {
-            value: item.blue,
-            background: "#d9d9d9",
-          },
+          value: str,
+          background: "#d9d9d9",
         };
       });
-      setTableData(data);
+      return {
+        id: item.id,
+        date: item.date,
+        index: index + 1,
+        seq: "",
+        red,
+        blue: {
+          value: item.blue,
+          background: "#d9d9d9",
+        },
+      };
     });
+    setTableData(data);
   };
 
   const resetHandle = () => {
+    setStartIndex(0);
     setTableData(
       (tableCopyData.length ? tableCopyData : tableData).map((item) => {
         let red = item.red.map((el: any) => ({
@@ -404,14 +407,18 @@ const Project: FC<HomeProps> = (props) => {
   };
 
   const deleteHandle = () => {
-    if (tableData.length > 10) {
+    if (!isDelete) {
       setTableCopyData(cloneDeep(tableData));
+      setTableData(tableData.slice(0, startIndex + 10));
+    } else {
+      setTableData(tableCopyData);
     }
-    setTableData(tableData.slice(0, 10));
+    setIsDelete(!isDelete);
   };
 
   // 连号分析
   const seqHandle = () => {
+    setStartIndex(0);
     setTableData(
       tableData.map((item) => {
         let red = item.red.map((el: any, index: number) => {
@@ -446,84 +453,82 @@ const Project: FC<HomeProps> = (props) => {
   };
 
   const query = () => {
-    api.get("/projects").then((res) => {
-      const arr = res.data.sort(
-        (a: any, b: any) =>
-          new Date(b.date.slice(0, 10)).getTime() -
-          new Date(a.date.slice(0, 10)).getTime()
-      );
-      const data: any[] = [];
-      let seq = 0;
+    const arr = outData.sort(
+      (a: any, b: any) =>
+        new Date(b.date.slice(0, 10)).getTime() -
+        new Date(a.date.slice(0, 10)).getTime()
+    );
+    const data: any[] = [];
+    let seq = 0;
 
-      // 和前面10组data相同的data有多少，red
-      arr.forEach((item: any, index: number) => {
-        if (index < arr.length - 11) {
-          let same: any = {};
-          let j = 0;
-          let sameStr = "";
-          for (let i = 1; i < 11; i++) {
-            same["same" + i] =
-              getSameNum(item.red, arr[index + i].red) == 0 ? 0 : 1;
-            sameStr += same["same" + i];
-            if (same["same" + i] == 0) {
-              j++;
-            }
-          }
-          let blue1 = 0;
-          let blue2 = 0;
-          for (let i = 1; i < 30; i++) {
-            if (item.blue == arr[index + i]?.blue) {
-              if (blue1 != 0 && blue2 == 0) {
-                blue2 = i;
-                break;
-              }
-              if (blue1 == 0) {
-                blue1 = i;
-              }
-            }
-          }
-          const nums = item.red.split(",").map((s: string) => Number(s));
-          seq++;
-          data.push({
-            lotteryDrawTime: item.date,
-            red: item.red,
-            blue: item.blue,
-            lotteryGameNum: "02",
-            ...same,
-            id: index,
-            total0: j,
-            blue1,
-            blue2,
-            series: findLongestConsecutive(nums),
-            regionRate: calculateZoneRatio(nums),
-            seq,
-            sameStr,
-          });
-        }
-      });
-      let t = 0;
-      let k = 0;
-      let y = 0;
-      let ttt: any[] = [];
-      let obj: any = {};
-      data.forEach((item) => {
-        if (item.regionRate === "2:2:2") {
-          if (obj[item.sameStr] == undefined) {
-            obj[item.sameStr] = 1;
-          } else {
-            obj[item.sameStr] += 1;
+    // 和前面10组data相同的data有多少，red
+    arr.forEach((item: any, index: number) => {
+      if (index < arr.length - 11) {
+        let same: any = {};
+        let j = 0;
+        let sameStr = "";
+        for (let i = 1; i < 11; i++) {
+          same["same" + i] =
+            getSameNum(item.red, arr[index + i].red) == 0 ? 0 : 1;
+          sameStr += same["same" + i];
+          if (same["same" + i] == 0) {
+            j++;
           }
         }
-      });
-      for (let p in obj) {
-        ttt.push({ name: p, value: obj[p] });
+        let blue1 = 0;
+        let blue2 = 0;
+        for (let i = 1; i < 30; i++) {
+          if (item.blue == arr[index + i]?.blue) {
+            if (blue1 != 0 && blue2 == 0) {
+              blue2 = i;
+              break;
+            }
+            if (blue1 == 0) {
+              blue1 = i;
+            }
+          }
+        }
+        const nums = item.red.split(",").map((s: string) => Number(s));
+        seq++;
+        data.push({
+          lotteryDrawTime: item.date,
+          red: item.red,
+          blue: item.blue,
+          lotteryGameNum: "02",
+          ...same,
+          id: index,
+          total0: j,
+          blue1,
+          blue2,
+          series: findLongestConsecutive(nums),
+          regionRate: calculateZoneRatio(nums),
+          seq,
+          sameStr,
+        });
       }
-
-      setData(
-        (data as DataType[]).slice(0, 100)
-        // .filter((item) => item.regionRate == "2:2:2")
-      );
     });
+    let t = 0;
+    let k = 0;
+    let y = 0;
+    let ttt: any[] = [];
+    let obj: any = {};
+    data.forEach((item) => {
+      if (item.regionRate === "2:2:2") {
+        if (obj[item.sameStr] == undefined) {
+          obj[item.sameStr] = 1;
+        } else {
+          obj[item.sameStr] += 1;
+        }
+      }
+    });
+    for (let p in obj) {
+      ttt.push({ name: p, value: obj[p] });
+    }
+
+    setData(
+      (data as DataType[]).slice(0, 100)
+      // .filter((item) => item.regionRate == "2:2:2")
+    );
   };
 
   // 检查连号
@@ -869,16 +874,6 @@ const Project: FC<HomeProps> = (props) => {
   };
   return (
     <div>
-      <Button type="primary" icon={<SearchOutlined />} onClick={query}>
-        Search
-      </Button>
-      <Table
-        columns={columns}
-        dataSource={data}
-        rowKey={"id"}
-        style={{ marginTop: 20, marginBottom: 20 }}
-        pagination={false}
-      />
       <Button type="primary" onClick={queryHandle}>
         置灰
       </Button>
@@ -914,6 +909,16 @@ const Project: FC<HomeProps> = (props) => {
         style={{ marginTop: 20, marginBottom: 20 }}
       />
 
+      <Button type="primary" icon={<SearchOutlined />} onClick={query}>
+        Search
+      </Button>
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey={"id"}
+        style={{ marginTop: 20, marginBottom: 20 }}
+        pagination={false}
+      />
       <Table
         columns={rateColumns}
         dataSource={rateData}
